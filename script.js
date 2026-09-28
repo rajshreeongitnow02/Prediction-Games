@@ -5,14 +5,14 @@
   const GOAL = 10; // first to this many wins takes the round
 
   // Each level is a smarter opponent.
-  //   smartness: chance (0-1) the AI uses its Markov prediction instead of a random guess
-  //   decay:     how fast the AI forgets old habits (lower = adapts faster to you)
+  //   smartness: chance (0-1) the AI uses its Markov prediction instead of a random guess the more the smartness, the more percentage of AI's brain is used
+  //   decay:how fast the AI forgets old habits (lower = adapts faster to you)
   const LEVELS = [
-    { name: "Sleepy Sloth",  smartness: 0.20, decay: 0.98 },
-    { name: "Cheeky Monkey", smartness: 0.40, decay: 0.96 },
-    { name: "Sly Fox",       smartness: 0.60, decay: 0.94 },
-    { name: "Wise Owl",      smartness: 0.80, decay: 0.92 },
-    { name: "Grand Wizard",  smartness: 0.95, decay: 0.90 },
+    { name: "Sleepy Sloth",  smartness: 0.50, decay: 0.50 },
+    { name: "Cheeky Monkey", smartness: 0.70, decay: 0.50 },
+    { name: "Sly Fox",       smartness: 0.84, decay: 0.50 },
+    { name: "Wise Owl",      smartness: 0.93, decay: 0.50 },
+    { name: "Grand Wizard",  smartness: 0.98, decay: 0.50 },
   ];
 
   // --- Game data ---------------------------------------------------------
@@ -69,15 +69,25 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   // --- State -------------------------------------------------------------
-  const predictor = new MarkovPredictor({ maxOrder: 3, decay: LEVELS[0].decay });
+  const predictor = new MarkovPredictor({ maxOrder: 2, decay: LEVELS[0].decay });
   const scores = { player: 0, draw: 0, computer: 0 };
   const aiStats = { correct: 0, total: 0 };
   let mode = "learning"; // "learning" | "random"
   let level = 1;         // 1-based, only used in "learning" mode
   let locked = false;
-  let endTimer = null;
   let pendingAction = null;
 
+  function startGame()
+  {
+    if(endTimer){ 
+      clearTimeout(endTimer); 
+    }
+    endTimer = setTimeout(() => 
+      {
+        console.log("Time's Up!!);
+        locked = true;
+      }, 300000);
+  }
   // --- Helpers -----------------------------------------------------------
   const icon = (choice, color = COLORS[choice]) => ICONS[choice](color);
   const randomPick = () => CHOICES[Math.floor(Math.random() * CHOICES.length)];
