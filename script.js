@@ -37,19 +37,24 @@
   const scoreEls = { player: $("score-player"), draw: $("score-draw"), computer: $("score-computer") };
   const choiceButtons = document.querySelectorAll(".choice");
   const resetBtn = $("reset");
+  const resetAiBtn = $("reset-ai");
+  const modeButtons = { learning: $("mode-learning"), random: $("mode-random") };
+  const aiPredictionEl = $("ai-prediction");
+  const aiAccuracyEl = $("ai-accuracy");
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   // --- State -------------------------------------------------------------
+  const predictor = new MarkovPredictor({ maxOrder: 3, decay: 0.95 });
   const scores = { player: 0, draw: 0, computer: 0 };
+  const aiStats = { correct: 0, total: 0 };
+  let mode = "learning"; // "learning" | "random"
   let locked = false;
 
   // --- Helpers -----------------------------------------------------------
   const icon = (choice) => ICONS[choice](COLORS[choice]);
-
-  function computerPick() {
-    return CHOICES[Math.floor(Math.random() * CHOICES.length)];
-  }
+  const randomPick = () => CHOICES[Math.floor(Math.random() * CHOICES.length)];
+  const counterTo = (move) => CHOICES.find((m) => BEATS[m] === move); // the move that beats `move`
 
   function getOutcome(player, computer) {
     if (player === computer) return "draw";
@@ -69,6 +74,39 @@
 
   function clearHandState() {
     [playerHand, computerHand].forEach((h) => h.classList.remove("win", "lose", "draw", "pop", "shake"));
+  }
+
+  function renderAiIdle() {
+    if (mode === "random") {
+      aiPredictionEl.textContent = "The computer is picking at random.";
+      aiAccuracyEl.textContent = "";
+    } else {
+      aiPredictionEl.textContent = "The AI learns your habits as you play.";
+      aiAccuracyEl.textContent = "";
+    }
+  }
+
+  function renderAiInsight(prediction, actualMove) {
+    if (mode !== "learning") return;
+
+    if (!prediction) {
+      aiPredictionEl.textContent = "The AI has no data yet, so it guessed randomly.";
+    } else {
+      const basis =
+        prediction.order === 0
+          ? "your overall habits"
+          : `your last ${prediction.order} move${prediction.order > 1 ? "s" : ""}`;
+      const pct = Math.round(prediction.confidence * 100);
+      const hit = prediction.move === actualMove ? "Correct." : "Missed.";
+      aiPredictionEl.textContent =
+        `AI predicted ${LABELS[prediction.move]} (${pct}% sure, based on ${basis}). ${hit}`;
+    }
+
+    if (aiStats.total > 0) {
+      const acc = Math.round((aiStats.correct / aiStats.total) * 100);
+      aiAccuracyEl.textContent =
+        `Predicted ${aiStats.correct} of ${aiStats.total} moves (${acc}%). Random guessing gets about 33%.`;
+    }
   }
 
   // --- Game flow ---------------------------------------------------------
@@ -96,8 +134,24 @@
   }
 
   function reveal(playerChoice) {
-    const computerChoice = computerPick();
+    // The computer decides using ONLY past rounds, before seeing this move.
+    let prediction = null;
+    let computerChoice;
+    if (mode === "learning") {
+      prediction = predictor.predict();
+      computerChoice = prediction ? counterTo(prediction.move) : randomPick();
+    } else {
+      computerChoice = randomPick();
+    }
+
     const outcome = getOutcome(playerChoice, computerChoice);
+
+    // Learn from this round (in both modes, so the model is ready when you switch)
+    if (mode === "learning" && prediction) {
+      aiStats.total++;
+      if (prediction.move === playerChoice) aiStats.correct++;
+    }
+    predictor.update(playerChoice);
 
     clearHandState();
     playerHand.innerHTML = icon(playerChoice);
@@ -126,12 +180,11 @@
 
     resultEl.classList.add(outcome === "win" ? "win" : outcome === "lose" ? "lose" : "draw");
     renderScores();
+    renderAiInsight(prediction, playerChoice);
     setLocked(false);
   }
 
-  function resetGame() {
-    scores.player = scores.draw = scores.computer = 0;
-    renderScores();
+  function resetRound() {
     clearHandState();
     playerHand.innerHTML = "";
     computerHand.innerHTML = "";
@@ -139,7 +192,24 @@
     computerName.textContent = "Computer's pick";
     resultEl.className = "result";
     resultEl.textContent = "Choose a move to start.";
+    renderAiIdle();
     setLocked(false);
+  }
+
+  function resetScore() {
+    scores.player = scores.draw = scores.computer = 0;
+    aiStats.correct = aiStats.total = 0;
+    renderScores();
+    resetRound();
+  }
+
+  function setMode(next) {
+    if (next === mode) return;
+    mode = next;
+    for (const [name, btn] of Object.entries(modeButtons)) {
+      btn.setAttribute("aria-pressed", String(name === mode));
+    }
+    resetScore(); // fresh scoreboard so the two modes can be compared fairly
   }
 
   // --- Events ------------------------------------------------------------
@@ -151,7 +221,15 @@
     btn.addEventListener("click", () => play(btn.dataset.choice));
   });
 
-  resetBtn.addEventListener("click", resetGame);
+  modeButtons.learning.addEventListener("click", () => setMode("learning"));
+  modeButtons.random.addEventListener("click", () => setMode("random"));
+
+  resetBtn.addEventListener("click", resetScore);
+
+  resetAiBtn.addEventListener("click", () => {
+    predictor.reset();
+    resetScore();
+  });
 
   document.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -159,4 +237,6 @@
     const choice = map[e.key.toLowerCase()];
     if (choice) play(choice);
   });
+
+  renderAiIdle();
 })();
