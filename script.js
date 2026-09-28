@@ -76,7 +76,7 @@
   let level = 1;         // 1-based, only used in "learning" mode
   let locked = false;
   let pendingAction = null;
-
+  let endTimer = null;
   function startGame()
   {
     if(endTimer){ 
