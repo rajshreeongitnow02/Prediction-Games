@@ -159,3 +159,47 @@ button:focus-visible {
   .choice-icon svg { width: 36px; height: 36px; }
   .result { font-size: 1.2rem; }
 }
+
+/* Mode switch */
+.modes {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: var(--surface);
+  border-radius: 999px;
+}
+.mode {
+  padding: 8px 18px;
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.mode:hover { color: var(--text); }
+.mode[aria-pressed="true"] { background: var(--scissors); color: #1b2a41; }
+
+/* AI insight */
+.ai-panel {
+  margin-top: 24px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.ai-panel p { margin: 0; }
+.ai-panel p + p:not(:empty) { margin-top: 6px; }
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.actions .reset { margin-top: 0; }
