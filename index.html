@@ -6,7 +6,7 @@
   <title>Rock Paper Scissors</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,10 +18,17 @@
       <button type="button" class="mode" id="mode-random" aria-pressed="false">Random</button>
     </div>
 
+    <div class="level-banner">
+      <span class="level-tag" id="level-tag">Level 1 of 5</span>
+      <span class="level-name" id="level-name">Sleepy Sloth</span>
+    </div>
+    <p class="goal">First to 10 wins the round</p>
+
     <section class="scoreboard" aria-label="Scoreboard">
       <div class="score">
         <span class="score-label">You</span>
         <span class="score-value" id="score-player">0</span>
+        <span class="meter" aria-hidden="true"><span class="meter-fill meter-player" id="meter-player"></span></span>
       </div>
       <div class="score score-draw">
         <span class="score-label">Draws</span>
@@ -30,6 +37,7 @@
       <div class="score">
         <span class="score-label">Computer</span>
         <span class="score-value" id="score-computer">0</span>
+        <span class="meter" aria-hidden="true"><span class="meter-fill meter-computer" id="meter-computer"></span></span>
       </div>
     </section>
 
@@ -67,11 +75,19 @@
     </section>
 
     <div class="actions">
-      <button class="reset" id="reset" type="button">Reset score</button>
+      <button class="reset" id="reset" type="button">Restart level</button>
       <button class="reset" id="reset-ai" type="button">Reset AI memory</button>
     </div>
     <p class="hint">Tip: press R, P or S on your keyboard.</p>
   </main>
+
+  <dialog class="dialog" id="match-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-text">
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+    <div class="dialog-icon" id="dialog-icon" aria-hidden="true"></div>
+    <h2 id="dialog-title"></h2>
+    <p id="dialog-text"></p>
+    <button type="button" class="primary" id="dialog-action"></button>
+  </dialog>
 
   <script src="ai.js"></script>
   <script src="script.js"></script>
