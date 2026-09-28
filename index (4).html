@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rock Paper Scissors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game">
+    <h1>Rock Paper Scissors</h1>
+
+    <section class="scoreboard" aria-label="Scoreboard">
+      <div class="score">
+        <span class="score-label">You</span>
+        <span class="score-value" id="score-player">0</span>
+      </div>
+      <div class="score score-draw">
+        <span class="score-label">Draws</span>
+        <span class="score-value" id="score-draw">0</span>
+      </div>
+      <div class="score">
+        <span class="score-label">Computer</span>
+        <span class="score-value" id="score-computer">0</span>
+      </div>
+    </section>
+
+    <section class="arena" aria-label="Current round">
+      <div class="hand-slot">
+        <div class="hand" id="player-hand" aria-hidden="true"></div>
+        <span class="hand-name" id="player-name">Your pick</span>
+      </div>
+      <div class="hand-slot">
+        <div class="hand" id="computer-hand" aria-hidden="true"></div>
+        <span class="hand-name" id="computer-name">Computer's pick</span>
+      </div>
+    </section>
+
+    <p class="result" id="result" role="status" aria-live="polite">Choose a move to start.</p>
+
+    <section class="choices" aria-label="Choose your move">
+      <button class="choice" data-choice="rock" aria-label="Rock (press R)">
+        <span class="choice-icon" data-icon="rock"></span>
+        <span>Rock</span>
+      </button>
+      <button class="choice" data-choice="paper" aria-label="Paper (press P)">
+        <span class="choice-icon" data-icon="paper"></span>
+        <span>Paper</span>
+      </button>
+      <button class="choice" data-choice="scissors" aria-label="Scissors (press S)">
+        <span class="choice-icon" data-icon="scissors"></span>
+        <span>Scissors</span>
+      </button>
+    </section>
+
+    <button class="reset" id="reset" type="button">Reset score</button>
+    <p class="hint">Tip: press R, P or S on your keyboard.</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
