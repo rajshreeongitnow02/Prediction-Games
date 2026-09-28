@@ -77,17 +77,7 @@
   let locked = false;
   let pendingAction = null;
   let endTimer = null;
-  function startGame()
-  {
-    if(endTimer){ 
-      clearTimeout(endTimer); 
-    }
-    endTimer = setTimeout(() => 
-      {
-        console.log("Time's Up!!);
-        locked = true;
-      }, 300000);
-  }
+  
   // --- Helpers -----------------------------------------------------------
   const icon = (choice, color = COLORS[choice]) => ICONS[choice](color);
   const randomPick = () => CHOICES[Math.floor(Math.random() * CHOICES.length)];
