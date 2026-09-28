@@ -1,0 +1,161 @@
+:root {
+  --bg: #1b2a41;
+  --surface: #24364f;
+  --surface-2: #2d4463;
+  --text: #f3f6fa;
+  --muted: #9fb0c8;
+  --rock: #c9c3b8;
+  --paper: #eaf0f6;
+  --scissors: #ff6b5b;
+  --win: #5bd6a3;
+  --lose: #ff6b5b;
+  --draw: #f2c94c;
+  --radius: 18px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.game {
+  width: 100%;
+  max-width: 560px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 24px;
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Scoreboard */
+.scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.score {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 12px 8px;
+}
+.score-draw { min-width: 90px; background: transparent; border: 2px dashed var(--surface-2); }
+.score-label { display: block; color: var(--muted); font-size: 0.9rem; }
+.score-value { display: block; font-size: 2.2rem; font-weight: 800; line-height: 1.1; }
+
+/* Arena */
+.arena {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.hand-slot { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.hand {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 200px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 3px solid transparent;
+  border-radius: 28px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.hand svg { width: 62%; height: 62%; }
+.hand-name { color: var(--muted); font-size: 0.95rem; min-height: 1.4em; }
+
+.hand.shake { animation: shake 0.6s ease-in-out; }
+.hand.win { border-color: var(--win); background: #23453f; }
+.hand.lose { border-color: var(--lose); }
+.hand.draw { border-color: var(--draw); }
+.hand.pop svg { animation: pop 0.35s ease-out; }
+
+@keyframes shake {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  20% { transform: translateY(-14px) rotate(-6deg); }
+  40% { transform: translateY(6px) rotate(4deg); }
+  60% { transform: translateY(-14px) rotate(-6deg); }
+  80% { transform: translateY(6px) rotate(4deg); }
+}
+@keyframes pop {
+  from { transform: scale(0.6); }
+  to { transform: scale(1); }
+}
+
+/* Result */
+.result {
+  min-height: 2.2rem;
+  margin: 16px 0 24px;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.result.win { color: var(--win); }
+.result.lose { color: var(--lose); }
+.result.draw { color: var(--draw); }
+
+/* Choices */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--surface-2);
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+.choice:hover:not(:disabled) { background: var(--surface-2); transform: translateY(-3px); }
+.choice:active:not(:disabled) { transform: translateY(0); }
+.choice:disabled { opacity: 0.5; cursor: not-allowed; }
+.choice-icon svg { width: 48px; height: 48px; display: block; }
+
+.reset {
+  margin-top: 24px;
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--muted);
+  border: 2px solid var(--surface-2);
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+}
+.reset:hover { color: var(--text); border-color: var(--muted); }
+
+.hint { margin: 16px 0 0; color: var(--muted); font-size: 0.85rem; }
+
+button:focus-visible {
+  outline: 3px solid var(--draw);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 420px) {
+  .choice-icon svg { width: 36px; height: 36px; }
+  .result { font-size: 1.2rem; }
+}
