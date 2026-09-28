@@ -13,6 +13,11 @@
   <main class="game">
     <h1>Rock Paper Scissors</h1>
 
+    <div class="modes" role="group" aria-label="Computer mode">
+      <button type="button" class="mode" id="mode-learning" aria-pressed="true">Learning AI</button>
+      <button type="button" class="mode" id="mode-random" aria-pressed="false">Random</button>
+    </div>
+
     <section class="scoreboard" aria-label="Scoreboard">
       <div class="score">
         <span class="score-label">You</span>
@@ -56,10 +61,19 @@
       </button>
     </section>
 
-    <button class="reset" id="reset" type="button">Reset score</button>
+    <section class="ai-panel" aria-label="AI insight">
+      <p id="ai-prediction">The AI learns your habits as you play.</p>
+      <p id="ai-accuracy"></p>
+    </section>
+
+    <div class="actions">
+      <button class="reset" id="reset" type="button">Reset score</button>
+      <button class="reset" id="reset-ai" type="button">Reset AI memory</button>
+    </div>
     <p class="hint">Tip: press R, P or S on your keyboard.</p>
   </main>
 
+  <script src="ai.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
