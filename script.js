@@ -1,11 +1,25 @@
 (() => {
   "use strict";
 
+  // --- Game settings -----------------------------------------------------
+  const GOAL = 10; // first to this many wins takes the round
+
+  // Each level is a smarter opponent.
+  //   smartness: chance (0-1) the AI uses its Markov prediction instead of a random guess
+  //   decay:     how fast the AI forgets old habits (lower = adapts faster to you)
+  const LEVELS = [
+    { name: "Sleepy Sloth",  smartness: 0.20, decay: 0.98 },
+    { name: "Cheeky Monkey", smartness: 0.40, decay: 0.96 },
+    { name: "Sly Fox",       smartness: 0.60, decay: 0.94 },
+    { name: "Wise Owl",      smartness: 0.80, decay: 0.92 },
+    { name: "Grand Wizard",  smartness: 0.95, decay: 0.90 },
+  ];
+
   // --- Game data ---------------------------------------------------------
   const CHOICES = ["rock", "paper", "scissors"];
   const BEATS = { rock: "scissors", paper: "rock", scissors: "paper" };
   const LABELS = { rock: "Rock", paper: "Paper", scissors: "Scissors" };
-  const COLORS = { rock: "#c9c3b8", paper: "#eaf0f6", scissors: "#ff6b5b" };
+  const COLORS = { rock: "#7b5cff", paper: "#ffb703", scissors: "#ff5d73" };
 
   // Simple inline SVG icons (no external images needed)
   const ICONS = {
@@ -35,26 +49,40 @@
   const computerName = $("computer-name");
   const resultEl = $("result");
   const scoreEls = { player: $("score-player"), draw: $("score-draw"), computer: $("score-computer") };
+  const meterPlayer = $("meter-player");
+  const meterComputer = $("meter-computer");
+  const levelTag = $("level-tag");
+  const levelName = $("level-name");
   const choiceButtons = document.querySelectorAll(".choice");
   const resetBtn = $("reset");
   const resetAiBtn = $("reset-ai");
   const modeButtons = { learning: $("mode-learning"), random: $("mode-random") };
   const aiPredictionEl = $("ai-prediction");
   const aiAccuracyEl = $("ai-accuracy");
+  const dialog = $("match-dialog");
+  const dialogIcon = $("dialog-icon");
+  const dialogTitle = $("dialog-title");
+  const dialogText = $("dialog-text");
+  const dialogAction = $("dialog-action");
+  const confettiEl = $("confetti");
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   // --- State -------------------------------------------------------------
-  const predictor = new MarkovPredictor({ maxOrder: 3, decay: 0.95 });
+  const predictor = new MarkovPredictor({ maxOrder: 3, decay: LEVELS[0].decay });
   const scores = { player: 0, draw: 0, computer: 0 };
   const aiStats = { correct: 0, total: 0 };
   let mode = "learning"; // "learning" | "random"
+  let level = 1;         // 1-based, only used in "learning" mode
   let locked = false;
+  let endTimer = null;
+  let pendingAction = null;
 
   // --- Helpers -----------------------------------------------------------
-  const icon = (choice) => ICONS[choice](COLORS[choice]);
+  const icon = (choice, color = COLORS[choice]) => ICONS[choice](color);
   const randomPick = () => CHOICES[Math.floor(Math.random() * CHOICES.length)];
   const counterTo = (move) => CHOICES.find((m) => BEATS[m] === move); // the move that beats `move`
+  const currentLevel = () => LEVELS[level - 1];
 
   function getOutcome(player, computer) {
     if (player === computer) return "draw";
@@ -70,6 +98,18 @@
     scoreEls.player.textContent = scores.player;
     scoreEls.draw.textContent = scores.draw;
     scoreEls.computer.textContent = scores.computer;
+    meterPlayer.style.width = Math.min(100, (scores.player / GOAL) * 100) + "%";
+    meterComputer.style.width = Math.min(100, (scores.computer / GOAL) * 100) + "%";
+  }
+
+  function renderLevel() {
+    if (mode === "learning") {
+      levelTag.textContent = `Level ${level} of ${LEVELS.length}`;
+      levelName.textContent = currentLevel().name;
+    } else {
+      levelTag.textContent = "Casual play";
+      levelName.textContent = "Random Rascal";
+    }
   }
 
   function clearHandState() {
@@ -77,16 +117,12 @@
   }
 
   function renderAiIdle() {
-    if (mode === "random") {
-      aiPredictionEl.textContent = "The computer is picking at random.";
-      aiAccuracyEl.textContent = "";
-    } else {
-      aiPredictionEl.textContent = "The AI learns your habits as you play.";
-      aiAccuracyEl.textContent = "";
-    }
+    aiPredictionEl.textContent =
+      mode === "random" ? "The computer is picking at random." : "The AI learns your habits as you play.";
+    aiAccuracyEl.textContent = "";
   }
 
-  function renderAiInsight(prediction, actualMove) {
+  function renderAiInsight(prediction, actualMove, usedPrediction) {
     if (mode !== "learning") return;
 
     if (!prediction) {
@@ -98,8 +134,9 @@
           : `your last ${prediction.order} move${prediction.order > 1 ? "s" : ""}`;
       const pct = Math.round(prediction.confidence * 100);
       const hit = prediction.move === actualMove ? "Correct." : "Missed.";
+      const guess = usedPrediction ? "" : " It went with a random guess this time.";
       aiPredictionEl.textContent =
-        `AI predicted ${LABELS[prediction.move]} (${pct}% sure, based on ${basis}). ${hit}`;
+        `AI predicted ${LABELS[prediction.move]} (${pct}% sure, based on ${basis}). ${hit}${guess}`;
     }
 
     if (aiStats.total > 0) {
@@ -136,10 +173,16 @@
   function reveal(playerChoice) {
     // The computer decides using ONLY past rounds, before seeing this move.
     let prediction = null;
+    let usedPrediction = false;
     let computerChoice;
     if (mode === "learning") {
       prediction = predictor.predict();
-      computerChoice = prediction ? counterTo(prediction.move) : randomPick();
+      if (prediction && Math.random() < currentLevel().smartness) {
+        computerChoice = counterTo(prediction.move);
+        usedPrediction = true;
+      } else {
+        computerChoice = randomPick();
+      }
     } else {
       computerChoice = randomPick();
     }
@@ -180,11 +223,22 @@
 
     resultEl.classList.add(outcome === "win" ? "win" : outcome === "lose" ? "lose" : "draw");
     renderScores();
-    renderAiInsight(prediction, playerChoice);
-    setLocked(false);
+    renderAiInsight(prediction, playerChoice, usedPrediction);
+
+    if (scores.player >= GOAL) endMatch("player");
+    else if (scores.computer >= GOAL) endMatch("computer");
+    else setLocked(false);
   }
 
-  function resetRound() {
+  // --- Rounds and levels ---------------------------------------------------
+  function startMatch() {
+    clearTimeout(endTimer);
+    if (dialog.open) dialog.close();
+    scores.player = scores.draw = scores.computer = 0;
+    if (mode === "learning") predictor.decay = currentLevel().decay;
+    renderScores();
+    renderLevel();
+
     clearHandState();
     playerHand.innerHTML = "";
     computerHand.innerHTML = "";
@@ -196,11 +250,69 @@
     setLocked(false);
   }
 
-  function resetScore() {
-    scores.player = scores.draw = scores.computer = 0;
-    aiStats.correct = aiStats.total = 0;
-    renderScores();
-    resetRound();
+  function endMatch(winner) {
+    setLocked(true);
+    // Short pause so the final hands stay visible before the dialog opens
+    endTimer = setTimeout(() => showDialog(winner), reduceMotion.matches ? 0 : 900);
+  }
+
+  function showDialog(winner) {
+    let emoji, title, text, action;
+
+    if (winner === "player") {
+      emoji = "🎉";
+      if (mode === "learning" && level < LEVELS.length) {
+        title = `Level ${level} cleared!`;
+        text = `You beat ${currentLevel().name} ${scores.player} to ${scores.computer}. Next up: ${LEVELS[level].name}, and it's smarter.`;
+        action = `Start level ${level + 1}`;
+        pendingAction = () => { level++; startMatch(); };
+      } else if (mode === "learning") {
+        emoji = "🏆";
+        title = "You're the Grand Champion!";
+        text = `You beat all ${LEVELS.length} opponents. The Grand Wizard is speechless.`;
+        action = "Play again from level 1";
+        pendingAction = () => { level = 1; startMatch(); };
+      } else {
+        title = "You win the round!";
+        text = `Final score: ${scores.player} to ${scores.computer}.`;
+        action = "Play again";
+        pendingAction = startMatch;
+      }
+    } else {
+      emoji = "😅";
+      title = mode === "learning" ? `${currentLevel().name} wins this round` : "The computer wins this round";
+      text = `Final score: ${scores.computer} to ${scores.player}. Give it another go!`;
+      action = "Try again";
+      pendingAction = startMatch;
+    }
+
+    dialogIcon.textContent = emoji;
+    dialogTitle.textContent = title;
+    dialogText.textContent = text;
+    dialogAction.textContent = action;
+
+    if (winner === "player") burstConfetti();
+    else confettiEl.innerHTML = "";
+
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+    dialogAction.focus();
+  }
+
+  function burstConfetti() {
+    confettiEl.innerHTML = "";
+    if (reduceMotion.matches) return;
+    const colors = ["#ffd23f", "#ff5d73", "#2ec4a0", "#7b5cff", "#57c7ff", "#ff8fcb"];
+    for (let i = 0; i < 70; i++) {
+      const piece = document.createElement("i");
+      piece.style.setProperty("--x", Math.random() * 100 + "%");
+      piece.style.setProperty("--w", 6 + Math.random() * 7 + "px");
+      piece.style.setProperty("--dur", 2.4 + Math.random() * 1.8 + "s");
+      piece.style.setProperty("--delay", Math.random() * 0.7 + "s");
+      piece.style.setProperty("--drift", Math.random() * 200 - 100 + "px");
+      piece.style.background = colors[i % colors.length];
+      confettiEl.appendChild(piece);
+    }
   }
 
   function setMode(next) {
@@ -209,10 +321,38 @@
     for (const [name, btn] of Object.entries(modeButtons)) {
       btn.setAttribute("aria-pressed", String(name === mode));
     }
-    resetScore(); // fresh scoreboard so the two modes can be compared fairly
+    level = 1;
+    aiStats.correct = aiStats.total = 0;
+    startMatch();
   }
 
-  // --- Events ------------------------------------------------------------
+  // --- Floating background icons -------------------------------------------
+  function spawnFloaters() {
+    const layer = document.createElement("div");
+    layer.className = "floaters";
+    layer.setAttribute("aria-hidden", "true");
+
+    const colors = ["#ffffff", "#ffd23f", "#ff8fcb", "#c8bbff", "#8ff5d3"];
+    const count = window.innerWidth < 600 ? 14 : 22;
+
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement("span");
+      el.className = "floater";
+      const dur = 18 + Math.random() * 20;
+      el.style.setProperty("--x", ((i + Math.random() * 0.8) / count) * 100 + "%");
+      el.style.setProperty("--y", Math.random() * 92 + "%");            // resting spot if motion is reduced
+      el.style.setProperty("--size", 26 + Math.random() * 34 + "px");
+      el.style.setProperty("--dur", dur + "s");
+      el.style.setProperty("--delay", -Math.random() * dur + "s");     // negative = already mid-flight on load
+      el.style.setProperty("--sway", Math.random() * 80 - 40 + "px");
+      el.style.setProperty("--spin", (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 120) + "deg");
+      el.innerHTML = icon(CHOICES[i % 3], colors[Math.floor(Math.random() * colors.length)]);
+      layer.appendChild(el);
+    }
+    document.body.prepend(layer);
+  }
+
+  // --- Events --------------------------------------------------------------
   document.querySelectorAll("[data-icon]").forEach((el) => {
     el.innerHTML = icon(el.dataset.icon);
   });
@@ -224,19 +364,30 @@
   modeButtons.learning.addEventListener("click", () => setMode("learning"));
   modeButtons.random.addEventListener("click", () => setMode("random"));
 
-  resetBtn.addEventListener("click", resetScore);
+  resetBtn.addEventListener("click", startMatch); // restart the current level
 
   resetAiBtn.addEventListener("click", () => {
     predictor.reset();
-    resetScore();
+    level = 1;
+    aiStats.correct = aiStats.total = 0;
+    startMatch();
   });
 
+  dialogAction.addEventListener("click", () => {
+    dialog.close();
+    if (pendingAction) pendingAction();
+  });
+
+  // Make the player pick a button instead of dismissing with Escape
+  dialog.addEventListener("cancel", (e) => e.preventDefault());
+
   document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (dialog.open || e.ctrlKey || e.metaKey || e.altKey) return;
     const map = { r: "rock", p: "paper", s: "scissors" };
     const choice = map[e.key.toLowerCase()];
     if (choice) play(choice);
   });
 
-  renderAiIdle();
+  spawnFloaters();
+  startMatch();
 })();
